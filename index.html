@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="kaa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boshqaruv paneli — Tradeart Global</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <header class="main-header">
+            <h1 class="logo-title">Boshqaruv paneli — <span class="brand">Tradeart</span></h1>
+            <div class="header-filters">
+                <select id="account-filter" class="filter-dropdown">
+                    <option value="all">🔍 Vse scheta (Barcha shotlar)</option>
+                </select>
+                <select id="time-filter" class="filter-dropdown">
+                    <option value="all">📅 Barcha vaqt</option>
+                    <option value="today">Bugun</option>
+                    <option value="month">Ushbu oy</option>
+                </select>
+            </div>
+        </header>
+
+        <hr style="border: none; border-top: 1px solid #1c1d26; margin-bottom: 30px;">
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <p class="stat-label">REZULTAT</p>
+                <p class="stat-value neutral" id="total-result">0.00%</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">VINREYT</p>
+                <p class="stat-value neutral" id="winrate">0%</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">SREDNIY RR</p>
+                <p class="stat-value neutral">0.00</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">SDELKALAR</p>
+                <p class="stat-value neutral" id="trade-count">0 ta sdelka</p>
+            </div>
+        </section>
+
+        <section class="journal-section">
+            <h2 class="table-title">Yopilgan sdelkalar jurnali (Live)</h2>
+            <div class="table-responsive">
+                <table class="trades-table">
+                    <thead>
+                        <tr>
+                            <th>Data zakritya</th>
+                            <th>Simvol</th>
+                            <th>Napravlenie</th>
+                            <th>Dlitelnost</th>
+                            <th>Rezultat ($)</th>
+                            <th>Akkaunt</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trades-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        let allTrades = [];
+        // ⚠️ BUL JERGE DE TELEGRAM KANALIŃIZDYN USERNAME-IN JAZASYZ
+        const CHANNEL_NAME = "YOUR_CHANNEL_USERNAME_WITHOUT_AT"; 
+
+        function fetchFromTelegram() {
+            // Telegram Kanaldıń ashıq API-sınan dynamic oqıp alıw rejimi
+            fetch(`https://tg.i-c-a.su/json/${CHANNEL_NAME}?limit=50`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || !data.messages) return;
+                    
+                    allTrades = [];
+                    data.messages.forEach(msg => {
+                        try {
+                            // Xabardı jetkerip dynamic json formatqa qaytarıw
+                            const jsonTrade = JSON.parse(msg.message);
+                            allTrades.push(jsonTrade);
+                        } catch(e) {}
+                    });
+
+                    populateAccountFilter();
+                    applyFilters();
+                })
+                .catch(err => console.log("Internet maǵlıwmat kútilmekte..."));
+        }
+
+        function populateAccountFilter() {
+            const filter = document.getElementById('account-filter');
+            const currentSelection = filter.value;
+            const uniqueLogins = [...new Set(allTrades.map(t => t.accountLogin))];
+            
+            filter.innerHTML = '<option value="all">🔍 Vse scheta (Barcha shotlar)</option>';
+            uniqueLogins.forEach(login => {
+                if(login) filter.innerHTML += `<option value="${login}">MT5: ${login}</option>`;
+            });
+            filter.value = currentSelection;
+        }
+
+        function applyFilters() {
+            const accFilter = document.getElementById('account-filter').value;
+            const timeFilter = document.getElementById('time-filter').value;
+            
+            let filtered = allTrades;
+
+            if (accFilter !== 'all') {
+                filtered = filtered.filter(t => t.accountLogin.toString() === accFilter);
+            }
+
+            const now = new Date();
+            if (timeFilter === 'today') {
+                filtered = filtered.filter(t => new Date(t.closeTime).toDateString() === now.toDateString());
+            } else if (timeFilter === 'month') {
+                filtered = filtered.filter(t => new Date(t.closeTime).getMonth() === now.getMonth());
+            }
+
+            const tbody = document.getElementById('trades-tbody');
+            tbody.innerHTML = '';
+            
+            let totalProfit = 0;
+            let wins = 0;
+
+            filtered.forEach(t => {
+                totalProfit += t.profit;
+                if (t.profit > 0) wins++;
+
+                const dateStr = new Date(t.closeTime).toLocaleDateString();
+                const profitClass = t.profit >= 0 ? 'positive' : 'negative';
+                const dirClass = t.direction === 'UZUN' ? 'dir-buy' : 'dir-sell';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td><b>${t.symbol}</b></td>
+                        <td><span class="dir-badge ${dirClass}">${t.direction}</span></td>
+                        <td>${t.duration} m</td>
+                        <td><span class="${profitClass}">${t.profit >= 0 ? '+' : ''}${t.profit.toFixed(2)}$</span></td>
+                        <td><small style="color:#8c8e9d">MT5: ${t.accountLogin}</small></td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('trade-count').innerText = `${filtered.length} ta sdelka`;
+            document.getElementById('total-result').innerText = (totalProfit >= 0 ? '+' : '') + totalProfit.toFixed(2) + '$';
+            document.getElementById('total-result').className = `stat-value ${totalProfit >= 0 ? 'positive' : 'negative'}`;
+            
+            const winrate = filtered.length > 0 ? Math.round((wins / filtered.length) * 100) : 0;
+            document.getElementById('winrate').innerText = `${winrate}%`;
+        }
+
+        document.getElementById('account-filter').addEventListener('change', applyFilters);
+        document.getElementById('time-filter').addEventListener('change', applyFilters);
+
+        setInterval(fetchFromTelegram, 4000); // Hár 4 sekundta jańalap turıw
+        fetchFromTelegram();
+    </script>
+</body>
+</html>
