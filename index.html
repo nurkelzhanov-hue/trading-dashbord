@@ -65,40 +65,44 @@
     </div>
 
     <script>
-        let allTrades = [];
-        // ⚠️ BUL JERGE DE TELEGRAM KANALIŃIZDYN USERNAME-IN JAZASYZ
         const CHANNEL_NAME = "nur_trading_baza"; 
+        let allTrades = [];
+
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchFromTelegram();
+            setInterval(fetchFromTelegram, 5000); 
+        });
 
         function fetchFromTelegram() {
-            // Telegram Kanaldıń ashıq API-sınan dynamic oqıp alıw rejimi
-            fetch(`https://tg.i-c-a.su/json/${CHANNEL_NAME}?limit=50`)
+            fetch(`https://tg.i-c-a.su/json/${CHANNEL_NAME}?limit=50&nocache=` + new Date().getTime())
                 .then(res => res.json())
                 .then(data => {
-                    if (!data || !data.messages) return;
+                    if (!data || !data.messages || data.messages.length === 0) return;
                     
                     allTrades = [];
                     data.messages.forEach(msg => {
                         try {
-                            // Xabardı jetkerip dynamic json formatqa qaytarıw
-                            const jsonTrade = JSON.parse(msg.message);
-                            allTrades.push(jsonTrade);
+                            if (msg.message) {
+                                const jsonTrade = JSON.parse(msg.message);
+                                allTrades.push(jsonTrade);
+                            }
                         } catch(e) {}
                     });
 
                     populateAccountFilter();
                     applyFilters();
                 })
-                .catch(err => console.log("Internet maǵlıwmat kútilmekte..."));
+                .catch(err => console.log("Tarmaq jańalanbaqta..."));
         }
 
         function populateAccountFilter() {
             const filter = document.getElementById('account-filter');
             const currentSelection = filter.value;
-            const uniqueLogins = [...new Set(allTrades.map(t => t.accountLogin))];
+            const uniqueLogins = [...new Set(allTrades.map(t => t.accountLogin))].filter(Boolean);
             
             filter.innerHTML = '<option value="all">🔍 Vse scheta (Barcha shotlar)</option>';
             uniqueLogins.forEach(login => {
-                if(login) filter.innerHTML += `<option value="${login}">MT5: ${login}</option>`;
+                filter.innerHTML += `<option value="${login}">MT5: ${login}</option>`;
             });
             filter.value = currentSelection;
         }
@@ -110,7 +114,7 @@
             let filtered = allTrades;
 
             if (accFilter !== 'all') {
-                filtered = filtered.filter(t => t.accountLogin.toString() === accFilter);
+                filtered = filtered.filter(t => t.accountLogin && t.accountLogin.toString() === accFilter);
             }
 
             const now = new Date();
@@ -153,12 +157,6 @@
             const winrate = filtered.length > 0 ? Math.round((wins / filtered.length) * 100) : 0;
             document.getElementById('winrate').innerText = `${winrate}%`;
         }
-
-        document.getElementById('account-filter').addEventListener('change', applyFilters);
-        document.getElementById('time-filter').addEventListener('change', applyFilters);
-
-        setInterval(fetchFromTelegram, 4000); // Hár 4 sekundta jańalap turıw
-        fetchFromTelegram();
     </script>
 </body>
 </html>
