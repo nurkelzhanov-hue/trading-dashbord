@@ -2,11 +2,33 @@
 <html lang="kaa">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boshqaruv paneli — Tradeart Global</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Trading Dashboard</title>
 </head>
 <body>
+    <table border="1">
+        <thead><tr><th>Symbol</th><th>Direction</th><th>Profit</th></tr></thead>
+        <tbody id="trades-tbody"></tbody>
+    </table>
+    <script>
+        const CHANNEL = "nur_trading_baza";
+        async function update() {
+            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://t.me/s/' + CHANNEL)}&t=${new Date().getTime()}`);
+            const data = await res.json();
+            const doc = new DOMParser().parseFromString(data.contents, 'text/html');
+            const tbody = document.getElementById('trades-tbody');
+            tbody.innerHTML = '';
+            doc.querySelectorAll('.tgme_widget_message_text').forEach(msg => {
+                try {
+                    const t = JSON.parse(msg.innerText);
+                    tbody.innerHTML += `<tr><td>${t.symbol}</td><td style="color:${t.direction=='BUY'?'green':'red'}">${t.direction}</td><td>${t.profit}$</td></tr>`;
+                } catch(e) {}
+            });
+        }
+        setInterval(update, 5000);
+        update();
+    </script>
+</body>
+</html>
     <div class="dashboard-container">
         <header class="main-header">
             <h1 class="logo-title">Boshqaruv paneli — <span class="brand">Tradeart</span></h1>
