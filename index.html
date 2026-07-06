@@ -10,9 +10,9 @@
         <tbody id="trades-tbody"></tbody>
     </table>
     <script>
-        const CHANNEL = "nur_trading_baza";
         async function update() {
-            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://t.me/s/' + CHANNEL)}&t=${new Date().getTime()}`);
+            // Telegram Public kanalın oqıw
+            const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://t.me/s/nur_trading_baza') + '&t=' + new Date().getTime());
             const data = await res.json();
             const doc = new DOMParser().parseFromString(data.contents, 'text/html');
             const tbody = document.getElementById('trades-tbody');
@@ -20,7 +20,7 @@
             doc.querySelectorAll('.tgme_widget_message_text').forEach(msg => {
                 try {
                     const t = JSON.parse(msg.innerText);
-                    tbody.innerHTML += `<tr><td>${t.symbol}</td><td style="color:${t.direction=='BUY'?'green':'red'}">${t.direction}</td><td>${t.profit}$</td></tr>`;
+                    tbody.innerHTML += `<tr><td>${t.symbol}</td><td>${t.direction}</td><td>${t.profit}$</td></tr>`;
                 } catch(e) {}
             });
         }
@@ -29,6 +29,7 @@
     </script>
 </body>
 </html>
+</body>
     <div class="dashboard-container">
         <header class="main-header">
             <h1 class="logo-title">Boshqaruv paneli — <span class="brand">Tradeart</span></h1>
